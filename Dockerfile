@@ -1,4 +1,5 @@
 ARG PYTHON_VERSION=3.12
+ARG XRAY_VERSION=v1.8.24
 
 FROM python:$PYTHON_VERSION-slim AS build
 
@@ -8,7 +9,7 @@ WORKDIR /code
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential curl unzip gcc python3-dev libpq-dev \
-    && curl -L https://github.com/Gozargah/Marzban-scripts/raw/master/install_latest_xray.sh | bash \
+    && curl -L https://github.com/Gozargah/Marzban-scripts/raw/master/install_latest_xray.sh | bash -s -- "${XRAY_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ./requirements.txt /code/
