@@ -5,12 +5,6 @@ import subprocess
 import threading
 from collections import deque
 from contextlib import contextmanager
-from typing import Optional
-
-try:
-    import resource
-except ImportError:  # pragma: no cover - platform dependent
-    resource = None
 
 from config import DEBUG, SSL_CERT_FILE, SSL_KEY_FILE, XRAY_API_HOST, XRAY_API_PORT, INBOUNDS
 from logger import logger
@@ -106,13 +100,9 @@ class XRayConfig(dict):
 class XRayCore:
     def __init__(self,
                  executable_path: str = "/usr/bin/xray",
-                 assets_path: str = "/usr/share/xray",
-                 nofile_limit: Optional[int] = 500_000,
-                 nproc_limit: Optional[int] = 50_000):
+                 assets_path: str = "/usr/share/xray"):
         self.executable_path = executable_path
         self.assets_path = assets_path
-        self.nofile_limit = nofile_limit
-        self.nproc_limit = nproc_limit
 
         self.version = self.get_version()
         self.process = None
@@ -127,35 +117,6 @@ class XRayCore:
         }
 
         atexit.register(lambda: self.stop() if self.started else None)
-
-    def _build_preexec_fn(self):
-        if resource is None:
-            return None
-
-        limits = []
-        if self.nofile_limit is not None:
-            try:
-                limits.append((resource.RLIMIT_NOFILE, self.nofile_limit))
-            except AttributeError:
-                pass
-
-        if self.nproc_limit is not None:
-            try:
-                limits.append((resource.RLIMIT_NPROC, self.nproc_limit))
-            except AttributeError:
-                pass
-
-        if not limits:
-            return None
-
-        def set_limits():
-            for limit, value in limits:
-                try:
-                    resource.setrlimit(limit, (value, value))
-                except (ValueError, OSError) as exc:
-                    logger.warning(f"Failed to set rlimit {limit}: {exc}")
-
-        return set_limits
 
     def get_version(self):
         cmd = [self.executable_path, "version"]
@@ -238,8 +199,7 @@ class XRayCore:
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            universal_newlines=True,
-            preexec_fn=self._build_preexec_fn()
+            universal_newlines=True
         )
         self.process.stdin.write(config.to_json())
         self.process.stdin.flush()
