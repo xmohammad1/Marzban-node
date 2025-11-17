@@ -1,9 +1,14 @@
 services:
   marzban-node:
     # build: .
-    image: gozargah/marzban-node:latest
+    image: xmohammad1/marzban-node:latest
     restart: always
     network_mode: host
+    ulimits:
+      nofile:
+        soft: 500000
+        hard: 500000
+      nproc: 50000
 
     # env_file: .env
     environment:
